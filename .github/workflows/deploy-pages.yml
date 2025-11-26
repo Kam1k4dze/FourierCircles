@@ -1,0 +1,149 @@
+name: Deploy WebAssembly build to GitHub Pages
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: '4.0.20'
+          actions-cache-folder: 'emsdk-cache'
+
+      - name: Cache CMake build dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            build-web/_deps
+            build-web/host_tools
+          key: ${{ runner.os }}-cmake-deps-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-cmake-deps-
+
+      - name: Verify Emscripten installation
+        run: |
+          echo "Emscripten version:"
+          emcc --version
+          echo ""
+          echo "CMake version:"
+          cmake --version
+
+      - name: Configure CMake (Emscripten web build)
+        run: |
+          emcmake cmake -S . -B build-web \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_VERBOSE_MAKEFILE=ON
+
+      - name: Build WebAssembly target
+        run: |
+          cmake --build build-web --config Release --parallel $(nproc)
+
+      - name: Verify build output
+        run: |
+          echo "Checking build artifacts..."
+          
+          ALL_PRESENT=true
+          if [ -f build-web/FourierCircles.html ]; then
+            echo "✓ FourierCircles.html found"
+          else
+            echo "✗ FourierCircles.html missing"
+            ALL_PRESENT=false
+          fi
+          
+          if [ -f build-web/FourierCircles.js ]; then
+            echo "✓ FourierCircles.js found"
+          else
+            echo "✗ FourierCircles.js missing"
+            ALL_PRESENT=false
+          fi
+          
+          if [ -f build-web/FourierCircles.wasm ]; then
+            echo "✓ FourierCircles.wasm found"
+          else
+            echo "✗ FourierCircles.wasm missing"
+            ALL_PRESENT=false
+          fi
+          
+          if [ "$ALL_PRESENT" = false ]; then
+            echo ""
+            echo "❌ Build verification failed: some artifacts are missing"
+            exit 1
+          fi
+          
+          echo ""
+          echo "Build artifact sizes:"
+          ls -lh build-web/FourierCircles.html build-web/FourierCircles.js build-web/FourierCircles.wasm
+
+      - name: Prepare GitHub Pages deployment
+        run: |
+          echo "Creating index.html for GitHub Pages..."
+          cp build-web/FourierCircles.html build-web/index.html
+          echo "✓ index.html created"
+
+      - name: Generate build summary
+        run: |
+          echo "## 🎉 WebAssembly Build Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Build Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| File | Size |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|------|" >> $GITHUB_STEP_SUMMARY
+          echo "| index.html | $(ls -lh build-web/index.html | awk '{print $5}') |" >> $GITHUB_STEP_SUMMARY
+          echo "| FourierCircles.js | $(ls -lh build-web/FourierCircles.js | awk '{print $5}') |" >> $GITHUB_STEP_SUMMARY
+          echo "| FourierCircles.wasm | $(ls -lh build-web/FourierCircles.wasm | awk '{print $5}') |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Build Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build Type:** Release" >> $GITHUB_STEP_SUMMARY
+          echo "- **Emscripten Version:** 4.0.20" >> $GITHUB_STEP_SUMMARY
+          echo "- **CMake Version:** $(cmake --version | head -n1)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload artifact for GitHub Pages
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: build-web
+          retention-days: 1
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Display deployment info
+        run: |
+          echo "## 🚀 Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The application has been deployed to GitHub Pages!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**URL:** ${{ steps.deployment.outputs.page_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "View your application at: ${{ steps.deployment.outputs.page_url }}" >> $GITHUB_STEP_SUMMARY
+

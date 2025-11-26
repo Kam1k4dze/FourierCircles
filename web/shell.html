@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en-us">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Fourier Circles SDL3</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #141419;
+            color: #aaa;
+            font-family: sans-serif;
+            overflow: hidden;
+        }
+
+        canvas.emscripten {
+            border: 0;
+            background-color: black;
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-weight: bold;
+            color: #F77F00;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+<div id="status">Downloading...</div>
+
+<canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+<input type="file" id="fileInput" accept=".svg" style="display: none;">
+
+<script type="module">
+    const statusElement = document.querySelector('#status');
+    const canvas = document.querySelector('#canvas');
+    const fileInput = document.querySelector('#fileInput');
+
+    const updateStatus = (text = '', color = '#F77F00') => {
+        statusElement.textContent = text;
+        statusElement.style.color = color;
+        statusElement.hidden = !text;
+    };
+
+    const notifyNative = (path = '') =>
+        Module.ccall('emscripten_file_selected', null, ['string'], [path]);
+
+    const Module = {
+        canvas,
+        totalDependencies: 0,
+        setStatus: updateStatus,
+        monitorRunDependencies(left) {
+            this.totalDependencies = Math.max(this.totalDependencies, left);
+            if (left) {
+                updateStatus(`Preparing... (${this.totalDependencies - left}/${this.totalDependencies})`);
+            } else {
+                this.totalDependencies = 0;
+                updateStatus('');
+            }
+        },
+        onRuntimeInitialized() {
+            updateStatus('');
+        }
+    };
+
+    window.Module = Module;
+
+    fileInput.addEventListener('change', async ({target}) => {
+        const file = target.files?.[0];
+        target.value = '';
+
+        if (!file) {
+            console.log('File selection canceled');
+            notifyNative();
+            return;
+        }
+
+        try {
+            const buffer = new Uint8Array(await file.arrayBuffer());
+            const filePath = `/tmp/${file.name}`;
+            FS.writeFile(filePath, buffer);
+            console.log('File written to FS:', filePath);
+            notifyNative(filePath);
+        } catch (error) {
+            console.error('Error handling file:', error);
+            notifyNative();
+        }
+    });
+
+    updateStatus('Downloading...');
+    window.addEventListener('error', () => updateStatus('Exception thrown, see JavaScript console', 'red'));
+</script>
+
+{{{ SCRIPT }}}
+</body>
+</html>
