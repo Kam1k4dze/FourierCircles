@@ -1,6 +1,7 @@
 # Fourier Circles
+Epicycle visualization that draws arbitrary SVG paths using Fourier series.
 
-> Epicycle visualization that draws arbitrary SVG paths using Fourier series.
+![](./assets/preview.png)
 
 ## Overview
 This project converts any SVG path into rotating circles (epicycles) that reconstruct the shape. Runs natively and in browser via WebAssembly.
