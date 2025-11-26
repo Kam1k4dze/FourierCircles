@@ -5,7 +5,7 @@
 #include <span>
 
 #define STB_TRUETYPE_IMPLEMENTATION
-#include "../fonts/stb_truetype.h"
+#include "stb_truetype.h"
 
 #include "embedded_font.h"
 

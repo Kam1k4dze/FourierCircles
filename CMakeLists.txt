@@ -109,20 +109,20 @@ file(MAKE_DIRECTORY ${EMBEDDED_DIR})
 add_custom_command(
         OUTPUT ${EMBEDDED_DIR}/embedded_font.h
         COMMAND ${EMBED_BINARY_EXE}
-        "${CMAKE_CURRENT_SOURCE_DIR}/fonts/RobotoSlab-Medium.ttf"
+        "${CMAKE_CURRENT_SOURCE_DIR}/assets/RobotoSlab-Medium.ttf"
         "${EMBEDDED_DIR}/embedded_font.h"
         "embedded_font_data"
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/fonts/RobotoSlab-Medium.ttf
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/assets/RobotoSlab-Medium.ttf
         COMMENT "Embedding font into header..."
 )
 
 add_custom_command(
         OUTPUT ${EMBEDDED_DIR}/embedded_svg.h
         COMMAND ${EMBED_TEXT_EXE}
-        "${CMAKE_CURRENT_SOURCE_DIR}/svg/cat.svg"
+        "${CMAKE_CURRENT_SOURCE_DIR}/assets/svg/cat.svg"
         "${EMBEDDED_DIR}/embedded_svg.h"
         "default_svg_content"
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/svg/cat.svg
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/assets/svg/cat.svg
         COMMENT "Embedding default SVG into header..."
 )
 
