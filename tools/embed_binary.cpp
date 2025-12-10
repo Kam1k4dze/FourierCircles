@@ -72,7 +72,6 @@ int main(int argc, char* argv[])
 
         // Prepare header contents
         const std::string filename = input_path.filename().string();
-        const std::string header_guard = make_header_guard(var_name);
 
         std::ofstream ofs(output_path, std::ios::trunc);
         if (!ofs)
@@ -84,7 +83,6 @@ int main(int argc, char* argv[])
 
         ofs << std::format("// Auto-generated from {}\n", filename);
         ofs << "#pragma once\n\n";
-        ofs << std::format("#ifndef {}\n#define {}\n\n", header_guard, header_guard);
         ofs << "#include <cstdint>\n#include <cstddef>\n\n";
         ofs << std::format("inline constexpr unsigned char {}[] = {{\n", var_name);
 
@@ -104,8 +102,7 @@ int main(int argc, char* argv[])
         }
 
         ofs << "\n};\n\n";
-        ofs << std::format("inline constexpr std::size_t {}_len = {};\n\n", var_name, data.size());
-        ofs << std::format("#endif // {}\n", header_guard);
+        ofs << std::format("inline constexpr std::size_t {}_len = {};\n", var_name, data.size());
 
         ofs.close();
 

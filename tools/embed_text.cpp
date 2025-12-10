@@ -9,19 +9,6 @@
 #include <string_view>
 #include <system_error>
 
-static constexpr std::string make_header_guard(std::string_view varname)
-{
-    std::string out = "EMBEDDED_";
-    out.reserve(out.size() + varname.size() + 2);
-    for (const char c : varname)
-    {
-        if (c >= 'a' && c <= 'z') out.push_back(static_cast<char>(c - 'a' + 'A'));
-        else if ((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) out.push_back(c);
-        else out.push_back('_');
-    }
-    out += "_H";
-    return out;
-}
 
 int main(int argc, char* argv[])
 {
@@ -57,7 +44,6 @@ int main(int argc, char* argv[])
         ifs.close();
 
         const std::string filename = input_path.filename().string();
-        const std::string header_guard = make_header_guard(var_name);
 
         std::ofstream ofs(output_path, std::ios::trunc);
         if (!ofs)
@@ -69,7 +55,6 @@ int main(int argc, char* argv[])
 
         ofs << std::format("// Auto-generated from {}\n", filename);
         ofs << "#pragma once\n\n";
-        ofs << std::format("#ifndef {}\n#define {}\n\n", header_guard, header_guard);
         ofs << "#include <string_view>\n\n";
 
         // Use raw string literal with a unique delimiter derived from variable name
@@ -77,9 +62,8 @@ int main(int argc, char* argv[])
         // If var_name may contain characters that could collide, keep delim fixed; it's very unlikely to appear.
         ofs << std::format("inline constexpr std::string_view {} = R\"{}(\n", var_name, delim);
         ofs << text;
-        ofs << std::format("){}\";\n\n", delim);
+        ofs << std::format("){}\";\n", delim);
 
-        ofs << std::format("#endif // {}\n", header_guard);
         ofs.close();
 
         std::cout << std::format("Generated {} ({} characters)\n", output_path.string(), text.size());
